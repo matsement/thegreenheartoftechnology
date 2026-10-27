@@ -1,4 +1,4 @@
 window.IMAGES = {
-  background: '/images/background.jpeg',
+  background: './background.jpeg',
   center: './heart-of-technology.png'
 };
