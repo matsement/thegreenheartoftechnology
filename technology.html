@@ -17,6 +17,47 @@
     }
   </style>
 </head>
+
+<script>
+  (function addBackButton() {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.id = 'goBackButton';
+    button.textContent = 'Go back';
+
+    Object.assign(button.style, {
+      position: 'fixed',
+      top: '16px',
+      left: '16px',
+      zIndex: '9999',
+      padding: '10px 18px',
+      font: '600 15px/1 system-ui, sans-serif',
+      color: '#fff',
+      background: 'rgba(20, 40, 36, .75)',
+      border: '1px solid rgba(90, 220, 188, .7)',
+      borderRadius: '999px',
+      cursor: 'pointer',
+      backdropFilter: 'blur(6px)',
+      boxShadow: '0 0 18px rgba(90, 220, 188, .45)'
+    });
+
+    button.addEventListener('mouseenter', () => { button.style.background = 'rgba(40, 90, 78, .85)'; });
+    button.addEventListener('mouseleave', () => { button.style.background = 'rgba(20, 40, 36, .75)'; });
+
+    button.addEventListener('click', () => {
+      // If the visitor came from a page on this site, go back to it.
+      // Otherwise (direct link, new tab) fall back to the start page.
+      if (document.referrer && new URL(document.referrer).origin === location.origin) {
+        history.back();
+      } else {
+        window.location.href = 'index.html'; // change to the file name of your main page
+      }
+    });
+
+    document.body.append(button);
+  })();
+</script>
+  
 <body>
   <img src="./technology-in-action.png" alt="Technology in Action Page Won't Load">
 </body>
