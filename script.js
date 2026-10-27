@@ -18,14 +18,25 @@ const randomAt = (seed) => {
 
 
 function drawAtmosphericNetwork() {
-  // Aantallen om aan te passen
-  const RADIAL_COUNT = 30;     // was 58 (radiale stralen + stipjes)
-  const FRAGMENT_COUNT = 12;   // was 34 (losse lijnstukjes buiten)
-  const CROSS_COUNT = 12;      // was 28 (verbindingen tussen sterren)
-  const HEART_RAY_EVERY = 2;   // was 1; 2 = elke 2e heartRay, 3 = elke 3e
+  const RADIAL_COUNT = 30;
+  const FRAGMENT_COUNT = 12;
+  const CROSS_COUNT = 12;
+  const HEART_RAY_EVERY = 2;
 
+  // Grootte van de eindpunt-stippen (hoger = beter zichtbaar)
+  const MICRO_DOT = .42;   // was .18
+  const RADIAL_DOT = .36;  // was .14
+  const CENTER_DOT = .7;
+
+  const clamp = (v) => Math.min(97, Math.max(3, v));
   const cloudNodes = [];
   const nodeAspect = window.innerHeight / window.innerWidth;
+  const line = (cls, clusters, a, b) =>
+    `<path class="network-line ${cls}" ${clusters !== null ? `data-clusters="${clusters}" ` : ''}d="M ${a.x.toFixed(2)} ${a.y.toFixed(2)} L ${b.x.toFixed(2)} ${b.y.toFixed(2)}" />`;
+  const dot = (cls, node, radius, clusters) =>
+    `<ellipse class="${cls}" ${clusters !== undefined ? `data-clusters="${clusters}" ` : ''}cx="${node.x.toFixed(2)}" cy="${node.y.toFixed(2)}" rx="${(radius * nodeAspect).toFixed(3)}" ry="${radius.toFixed(3)}" />`;
+
+  const center = { x: 50, y: 50 };
 
   const backgroundParticles = Array.from({ length: 125 }, (_, index) => {
     const x = randomAt(index + 4) * 112 - 6;
@@ -36,12 +47,13 @@ function drawAtmosphericNetwork() {
     return `<circle class="background-particle${blur}" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${radius.toFixed(2)}" opacity="${opacity.toFixed(2)}" style="--delay:-${(index % 13) * .7}s" />`;
   }).join('');
 
+  // Lokale nodes rond elke ster, altijd binnen beeld
   const localNodes = starData.flatMap((star, cluster) => Array.from({ length: 7 }, (_, index) => {
     const angle = randomAt(cluster * 31 + index + 14) * Math.PI * 2;
     const radius = 4 + randomAt(cluster * 47 + index + 77) * 8;
     const node = {
-      x: star.x + Math.cos(angle) * radius,
-      y: star.y + Math.sin(angle) * radius * .62,
+      x: clamp(star.x + Math.cos(angle) * radius),
+      y: clamp(star.y + Math.sin(angle) * radius * .62),
       cluster,
       index
     };
@@ -49,32 +61,31 @@ function drawAtmosphericNetwork() {
     return node;
   }));
 
-  const branches = starData.map((star, cluster) => {
-    const related = localNodes.filter((node) => node.cluster === cluster);
-    return related.slice(0, 2).map((node) => {
-      return `<path class="network-line local-branch" data-clusters="${cluster}" d="M ${star.x} ${star.y} L ${node.x.toFixed(2)} ${node.y.toFixed(2)}" />`;
-    }).join('');
-  }).join('');
+  const byCluster = starData.map((_, cluster) => localNodes.filter((n) => n.cluster === cluster));
 
-  const localLinks = starData.map((_, cluster) => {
-    const related = localNodes.filter((node) => node.cluster === cluster);
-    return related.slice(0, -1).map((node, index) => {
-      const next = related[index + 1];
-      return `<path class="network-line local-link" data-clusters="${cluster}" d="M ${node.x.toFixed(2)} ${node.y.toFixed(2)} L ${next.x.toFixed(2)} ${next.y.toFixed(2)}" />`;
-    }).join('');
-  }).join('');
+  // Ster -> eerste 2 nodes
+  const branches = starData.map((star, cluster) =>
+    byCluster[cluster].slice(0, 2).map((node) => line('local-branch', cluster, star, node)).join('')
+  ).join('');
 
+  // Ketting door alle 7 nodes van een cluster (alle nodes zitten dus vast aan de ster)
+  const localLinks = byCluster.map((related, cluster) =>
+    related.slice(0, -1).map((node, i) => line('local-link', cluster, node, related[i + 1])).join('')
+  ).join('');
+
+  // Verbindingen tussen clusters (nooit een punt met zichzelf)
   const crossLinks = Array.from({ length: CROSS_COUNT }, (_, index) => {
     const first = cloudNodes[(index * 7 + 3) % cloudNodes.length];
     let second = cloudNodes[(index * 13 + 11) % cloudNodes.length];
     if (first.cluster === second.cluster) second = cloudNodes[(index * 13 + 19) % cloudNodes.length];
-    return `<path class="network-line cross-link" data-clusters="${first.cluster} ${second.cluster}" d="M ${first.x.toFixed(2)} ${first.y.toFixed(2)} L ${second.x.toFixed(2)} ${second.y.toFixed(2)}" />`;
+    if (first === second) return '';
+    return line('cross-link', `${first.cluster} ${second.cluster}`, first, second);
   }).join('');
 
+  // Midden -> lokale nodes
   const heartRays = localNodes.map((node, index) => {
     if (index % HEART_RAY_EVERY !== 0) return '';
-    const className = index % 9 === 0 ? 'heart-ray bright-ray' : 'heart-ray';
-    return `<path class="network-line ${className}" data-clusters="${node.cluster}" d="M 50 50 L ${node.x.toFixed(2)} ${node.y.toFixed(2)}" />`;
+    return line(index % 9 === 0 ? 'heart-ray bright-ray' : 'heart-ray', node.cluster, center, node);
   }).join('');
 
   const radialNodes = Array.from({ length: RADIAL_COUNT }, (_, index) => {
@@ -87,35 +98,33 @@ function drawAtmosphericNetwork() {
     return { x, y };
   });
 
-  const radialRays = radialNodes.map((node, index) => {
-    const className = index % 12 === 0 ? 'radial-ray bright-ray' : 'radial-ray';
-    return `<path class="network-line ${className}" d="M 50 50 L ${node.x.toFixed(2)} ${node.y.toFixed(2)}" />`;
-  }).join('');
+  const radialRays = radialNodes.map((node, index) =>
+    line(index % 12 === 0 ? 'radial-ray bright-ray' : 'radial-ray', null, center, node)
+  ).join('');
 
   const outerFragments = Array.from({ length: FRAGMENT_COUNT }, (_, index) => {
     const first = radialNodes[(index * 5 + 1) % radialNodes.length];
     const second = radialNodes[(index * 11 + 13) % radialNodes.length];
-    return `<path class="network-line outer-fragment" d="M ${first.x.toFixed(2)} ${first.y.toFixed(2)} L ${second.x.toFixed(2)} ${second.y.toFixed(2)}" />`;
+    if (first === second) return '';
+    return line('outer-fragment', null, first, second);
   }).join('');
 
-  const foregroundLinks = starData.map((_, cluster) => {
-    const related = localNodes.filter((node) => node.cluster === cluster);
-    const first = related[2];
-    const second = related[5];
-    return `<path class="network-line foreground-link" data-clusters="${cluster}" d="M ${first.x.toFixed(2)} ${first.y.toFixed(2)} L ${second.x.toFixed(2)} ${second.y.toFixed(2)}" />`;
-  }).join('');
+  const foregroundLinks = byCluster.map((related, cluster) =>
+    line('foreground-link', cluster, related[2], related[5])
+  ).join('');
 
-  const nodes = localNodes.map((node, index) => {
-    const radius = .18 * (index % 8 === 0 ? 1.5 : 1);
-    return `<ellipse class="micro-node ${index % 8 === 0 ? 'brighter-node' : ''}" data-clusters="${node.cluster}" cx="${node.x.toFixed(2)}" cy="${node.y.toFixed(2)}" rx="${(radius * nodeAspect).toFixed(3)}" ry="${radius.toFixed(3)}" />`;
-  }).join('');
+  // Zichtbare stip op elk eindpunt
+  const nodes = localNodes.map((node, index) =>
+    dot(`micro-node ${index % 8 === 0 ? 'brighter-node' : ''}`, node, MICRO_DOT * (index % 8 === 0 ? 1.5 : 1), node.cluster)
+  ).join('');
 
-  const radialMarks = radialNodes.map((node, index) => {
-    const radius = .14 * (index % 12 === 0 ? 1.5 : 1);
-    return `<ellipse class="radial-node ${index % 12 === 0 ? 'brighter-node' : ''}" cx="${node.x.toFixed(2)}" cy="${node.y.toFixed(2)}" rx="${(radius * nodeAspect).toFixed(3)}" ry="${radius.toFixed(3)}" />`;
-  }).join('');
+  const radialMarks = radialNodes.map((node, index) =>
+    dot(`radial-node ${index % 12 === 0 ? 'brighter-node' : ''}`, node, RADIAL_DOT * (index % 12 === 0 ? 1.5 : 1))
+  ).join('');
 
-  atmosphericNetwork.innerHTML = `<defs><filter id="networkBlur"><feGaussianBlur stdDeviation=".7" /></filter><filter id="networkGlow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation=".28" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><g class="network-background" filter="url(#networkBlur)">${backgroundParticles}</g><g class="network-midground">${radialRays}${heartRays}${outerFragments}${crossLinks}${localLinks}${branches}${radialMarks}${nodes}</g><g class="network-foreground" filter="url(#networkGlow)">${foregroundLinks}</g>`;
+  const centerMark = dot('radial-node brighter-node center-node', center, CENTER_DOT);
+
+  atmosphericNetwork.innerHTML = `<defs><filter id="networkBlur"><feGaussianBlur stdDeviation=".7" /></filter><filter id="networkGlow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation=".28" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><g class="network-background" filter="url(#networkBlur)">${backgroundParticles}</g><g class="network-midground">${radialRays}${heartRays}${outerFragments}${crossLinks}${localLinks}${branches}${radialMarks}${nodes}${centerMark}</g><g class="network-foreground" filter="url(#networkGlow)">${foregroundLinks}</g>`;
 }
 
 function setLocalNetwork(cluster, active) {
