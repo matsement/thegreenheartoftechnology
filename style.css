@@ -43,14 +43,76 @@ html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background:
 
 /* Interactive network: the generous transparent button target preserves the existing dot size. */
 .star { width: 44px; height: 44px; background: transparent; box-shadow: none; }
-.star::before { content: ""; position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 0 14px rgba(255,255,255,1), 0 0 28px rgba(120,220,255,.95); transform: translate(-50%, -50%); transition: transform .22s ease, box-shadow .22s ease; }
-.star::after { content: ""; position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; border: 1px solid rgba(147,242,255,.4); border-radius: 50%; transform: translate(-50%, -50%) scale(.72); opacity: .4; transition: opacity .22s ease, transform .22s ease; }
-.star-label { top: calc(50% + 21px); }
-.star:hover::before, .star:focus-visible::before, .star.is-active::before { transform: translate(-50%, -50%) scale(1.25); box-shadow: 0 0 16px 3px rgba(236,255,255,1), 0 0 34px 9px rgba(86,231,255,.9); }
-.star:hover::after, .star:focus-visible::after, .star.is-active::after { opacity: .9; transform: translate(-50%, -50%) scale(1.15); }
-.star:focus-visible { outline: 2px solid #e4feff; outline-offset: 5px; }
+
+.star::before {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, #f4ffd8 45%, #b8ff5c 100%);
+  box-shadow:
+    0 0 6px 2px rgba(255, 255, 255, 1),
+    0 0 16px 6px rgba(170, 255, 80, .95),
+    0 0 36px 14px rgba(90, 220, 60, .65);
+  transform: translate(-50%, -50%);
+  transition: transform .22s ease, box-shadow .22s ease;
+}
+
+.star::after {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 30px; height: 30px;
+  border: 1.5px solid rgba(190, 255, 110, .9);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, .35), rgba(255, 255, 255, .08) 70%);
+  box-shadow: 0 0 12px rgba(150, 255, 70, .8), inset 0 0 8px rgba(255, 255, 255, .6);
+  transform: translate(-50%, -50%) scale(.8);
+  opacity: .75;
+  transition: opacity .22s ease, transform .22s ease;
+}
+
+.star-label { top: calc(50% + 24px); }
+
+.star:hover::before,
+.star:focus-visible::before,
+.star.is-active::before {
+  transform: translate(-50%, -50%) scale(1.35);
+  box-shadow:
+    0 0 8px 3px #fff,
+    0 0 22px 9px rgba(190, 255, 100, 1),
+    0 0 50px 20px rgba(100, 235, 60, .8);
+}
+
+.star:hover::after,
+.star:focus-visible::after,
+.star.is-active::after {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.2);
+}
+
+.star:focus-visible { outline: 2px solid #f2ffd0; outline-offset: 5px; }
+
 @media (prefers-reduced-motion: reduce) { .star::before, .star::after { transition: none; } }
 @keyframes network-drift { from { transform: translate3d(-.25%, -.15%, 0); } to { transform: translate3d(.3%, .2%, 0); } }
-@keyframes particle-shimmer { 0%, 100% { opacity: .22; } 50% { opacity: .8; } }
+@keyframes particle-shimmer { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+
+.background-particle {
+  background: #f4ffd8;
+  box-shadow: 0 0 6px 2px rgba(190, 255, 100, .9), 0 0 14px 4px rgba(90, 220, 60, .6);
+}
+
+.network-midground {
+  filter: drop-shadow(0 0 3px rgba(170, 255, 80, .9)) drop-shadow(0 0 8px rgba(90, 220, 60, .6));
+  opacity: 1;
+}
+/* als het netwerk uit SVG-lijnen bestaat: */
+.network-midground line,
+.network-midground path {
+  stroke: rgba(200, 255, 120, .95);
+  stroke-width: 1.2;
+}
+
 @media (prefers-reduced-motion: reduce) { .network-midground, .background-particle { animation: none; } }
 
