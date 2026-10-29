@@ -1,9 +1,8 @@
 const starData = [
-  { label: 'Explore the Green Heart of TU delft campus', x: 57, y: 79, url: 'explore.html' },
-  { label: 'Discover What’s Growing', x: 24, y: 37, url: 'discover.html' },
-  { label: 'Technology in Action', x: 18, y: 74, url: 'technology.html' },
-  { label: 'What’s On at the Hortus?', x: 86, y: 43, url: 'whats-on.html' },
-  { label: 'Meet, Connect & Grow', x: 61, y: 18, url: 'meet-connect-grow.html' }
+  { label: 'Explore the Green Heart of TU delft campus', x: 80, y: 74, url: 'explore.html' },
+  { label: 'Technology in Action', x: 21, y: 32, url: 'technology.html' },
+  { label: 'What’s On at the Hortus?', x: 18, y: 74, url: 'whats-on.html' },
+  { label: 'Meet, Connect & Grow', x: 75, y: 18, url: 'meet-connect-grow.html' }
 ];
 const starsLayer = document.querySelector('#starsLayer');
 const atmosphericNetwork = document.querySelector('#atmosphericNetwork');
