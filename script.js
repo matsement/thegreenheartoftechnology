@@ -1,139 +1,60 @@
 const starData = [
-  { label: 'Explore the Green Heart of TU delft campus', x: 80, y: 74, url: 'explore.html' },
-  { label: 'Technology in Action', x: 21, y: 32, url: 'technology.html' },
-  { label: 'What’s On at the Hortus?', x: 18, y: 74, url: 'whats-on.html' },
-  { label: 'Meet, Connect & Grow', x: 75, y: 18, url: 'meet-connect-grow.html' }
+  { label: 'Explore the Green Heart of TU delft campus', x: 86, y: 67, url: 'explore.html', depth: .72, thumbnails: ['thumbnail/Explore.png', 'thumbnail/Explore2.png', 'thumbnail/Explore3.png'], badge: 'thumbnail/showpiece.png', badgeLabel: 'Showpiece', previewX: '79%', previewY: '44%' },
+  { label: 'Technology in Action', x: 13, y: 35, url: 'technology.html', depth: .55, thumbnails: ['thumbnail/Technology.png', 'thumbnail/Technology2.png'], badge: 'thumbnail/bridge.png', badgeLabel: 'Bridge', previewX: '7%', previewY: '14%' },
+  { label: 'What’s On at the Hortus?', x: 24, y: 86, url: 'whats-on.html', depth: 1, thumbnails: ['thumbnail/whatson.png', 'thumbnail/whatson2.png', 'thumbnail/whatson3.png'], badge: 'thumbnail/immersive.png', badgeLabel: 'Immersive', previewX: '18%', previewY: '63%' },
+  { label: 'Meet, Connect & Grow', x: 75, y: 21, url: 'meet-connect-grow.html', depth: .28, thumbnail: 'thumbnail/meet.png', badge: 'thumbnail/collab.png', badgeLabel: 'Collaboration', previewX: '70%', previewY: '1.5%' }
 ];
+
 const starsLayer = document.querySelector('#starsLayer');
-const atmosphericNetwork = document.querySelector('#atmosphericNetwork');
+const thumbnailLayer = document.querySelector('#thumbnailLayer');
+const buttonConnections = document.querySelector('#buttonConnections');
 const backgroundImage = document.querySelector('#backgroundImage');
 const centerImage = document.querySelector('#centerImage');
-const randomAt = (seed) => {
-  const value = Math.sin(seed * 12.9898) * 43758.5453;
-  return value - Math.floor(value);
-};
 
-
-
-
-function drawAtmosphericNetwork() {
-  const RADIAL_COUNT = 30;
-  const FRAGMENT_COUNT = 12;
-  const CROSS_COUNT = 12;
-  const HEART_RAY_EVERY = 2;
-
-  // Grootte van de eindpunt-stippen (hoger = beter zichtbaar)
-  const MICRO_DOT = .42;   // was .18
-  const RADIAL_DOT = .36;  // was .14
-  const CENTER_DOT = .7;
-
-  const clamp = (v) => Math.min(97, Math.max(3, v));
-  const cloudNodes = [];
+function drawButtonConnections() {
   const nodeAspect = window.innerHeight / window.innerWidth;
-  const line = (cls, clusters, a, b) =>
-    `<path class="network-line ${cls}" ${clusters !== null ? `data-clusters="${clusters}" ` : ''}d="M ${a.x.toFixed(2)} ${a.y.toFixed(2)} L ${b.x.toFixed(2)} ${b.y.toFixed(2)}" />`;
-  const dot = (cls, node, radius, clusters) =>
-    `<ellipse class="${cls}" ${clusters !== undefined ? `data-clusters="${clusters}" ` : ''}cx="${node.x.toFixed(2)}" cy="${node.y.toFixed(2)}" rx="${(radius * nodeAspect).toFixed(3)}" ry="${radius.toFixed(3)}" />`;
-
-  const center = { x: 50, y: 50 };
-
-  const backgroundParticles = Array.from({ length: 125 }, (_, index) => {
-    const x = randomAt(index + 4) * 112 - 6;
-    const y = randomAt(index + 89) * 110 - 5;
-    const radius = index % 17 === 0 ? .34 : .08 + randomAt(index + 219) * .16;
-    const opacity = .12 + randomAt(index + 301) * .34;
-    const blur = index % 11 === 0 ? ' foreground-particle' : '';
-    return `<circle class="background-particle${blur}" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${radius.toFixed(2)}" opacity="${opacity.toFixed(2)}" style="--delay:-${(index % 13) * .7}s" />`;
+  const connectionPairs = [[0, 1], [1, 2], [2, 3], [3, 0], [0, 2], [1, 3]];
+  const buttonLines = connectionPairs.map(([fromIndex, toIndex]) => {
+    const from = starData[fromIndex];
+    const to = starData[toIndex];
+    const connectionDepth = (from.depth + to.depth) / 2;
+    const lineWidth = (.7 + connectionDepth * 2.7).toFixed(2);
+    const lineOpacity = (.3 + connectionDepth * .7).toFixed(2);
+    return `<line class="button-connection" style="--connection-width:${lineWidth}; --connection-opacity:${lineOpacity}" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}" />`;
   }).join('');
 
-  // Lokale nodes rond elke ster, altijd binnen beeld
-  const localNodes = starData.flatMap((star, cluster) => Array.from({ length: 7 }, (_, index) => {
-    const angle = randomAt(cluster * 31 + index + 14) * Math.PI * 2;
-    const radius = 4 + randomAt(cluster * 47 + index + 77) * 8;
-    const node = {
-      x: clamp(star.x + Math.cos(angle) * radius),
-      y: clamp(star.y + Math.sin(angle) * radius * .62),
-      cluster,
-      index
-    };
-    cloudNodes.push(node);
-    return node;
-  }));
-
-  const byCluster = starData.map((_, cluster) => localNodes.filter((n) => n.cluster === cluster));
-
-  // Ster -> eerste 2 nodes
-  const branches = starData.map((star, cluster) =>
-    byCluster[cluster].slice(0, 2).map((node) => line('local-branch', cluster, star, node)).join('')
-  ).join('');
-
-  // Ketting door alle 7 nodes van een cluster (alle nodes zitten dus vast aan de ster)
-  const localLinks = byCluster.map((related, cluster) =>
-    related.slice(0, -1).map((node, i) => line('local-link', cluster, node, related[i + 1])).join('')
-  ).join('');
-
-  // Verbindingen tussen clusters (nooit een punt met zichzelf)
-  const crossLinks = Array.from({ length: CROSS_COUNT }, (_, index) => {
-    const first = cloudNodes[(index * 7 + 3) % cloudNodes.length];
-    let second = cloudNodes[(index * 13 + 11) % cloudNodes.length];
-    if (first.cluster === second.cluster) second = cloudNodes[(index * 13 + 19) % cloudNodes.length];
-    if (first === second) return '';
-    return line('cross-link', `${first.cluster} ${second.cluster}`, first, second);
+  const decorativeNodes = [
+    { id: 'top', x: 39.3, y: 18.7, depth: .7 },
+    { id: 'left', x: 10.5, y: 66.8, depth: .82 },
+    { id: 'right', x: 89.9, y: 36.1, depth: .35 },
+    { id: 'bottom', x: 75.8, y: 81.5, depth: .58 }
+  ];
+  const center = { x: 50, y: 50, depth: .55 };
+  const nodesById = Object.fromEntries(decorativeNodes.map((node) => [node.id, node]));
+  const decoratedButton = (index) => ({ ...starData[index], id: `button-${index}` });
+  const decorativeConnections = [
+    { from: nodesById.top, to: decoratedButton(3) },
+    { from: nodesById.top, to: center },
+    { from: nodesById.left, to: decoratedButton(1) },
+    { from: nodesById.left, to: decoratedButton(2) },
+    { from: nodesById.right, to: nodesById.bottom, emphasized: true },
+    { from: nodesById.right, to: center, emphasized: true },
+    { from: nodesById.bottom, to: center }
+  ];
+  const decorativeLines = decorativeConnections.map(({ from, to, emphasized }) => {
+    const depth = (from.depth + to.depth) / 2;
+    const lineWidth = (emphasized ? .4 + depth * 2.5 : .45 + depth * 3.3).toFixed(2);
+    const lineOpacity = (.18 + depth * .45).toFixed(2);
+    const emphasisClass = emphasized ? ' is-emphasized' : '';
+    return `<line class="decorative-connection${emphasisClass}" style="--decorative-width:${lineWidth}; --decorative-opacity:${lineOpacity}" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}" />`;
+  }).join('');
+  const decorativeMarks = decorativeNodes.map((node) => {
+    const radius = .25 + node.depth * .18;
+    return `<ellipse class="decorative-node" cx="${node.x}" cy="${node.y}" rx="${(radius * nodeAspect).toFixed(3)}" ry="${radius.toFixed(3)}" />`;
   }).join('');
 
-  // Midden -> lokale nodes
-  const heartRays = localNodes.map((node, index) => {
-    if (index % HEART_RAY_EVERY !== 0) return '';
-    return line(index % 9 === 0 ? 'heart-ray bright-ray' : 'heart-ray', node.cluster, center, node);
-  }).join('');
-
-  const radialNodes = Array.from({ length: RADIAL_COUNT }, (_, index) => {
-    let x = 4 + randomAt(index + 711) * 92;
-    let y = 4 + randomAt(index + 809) * 92;
-    if (Math.hypot(x - 50, y - 50) < 19) {
-      x = (x + 27) % 94 + 3;
-      y = (y + 18) % 94 + 3;
-    }
-    return { x, y };
-  });
-
-  const radialRays = radialNodes.map((node, index) =>
-    line(index % 12 === 0 ? 'radial-ray bright-ray' : 'radial-ray', null, center, node)
-  ).join('');
-
-  const outerFragments = Array.from({ length: FRAGMENT_COUNT }, (_, index) => {
-    const first = radialNodes[(index * 5 + 1) % radialNodes.length];
-    const second = radialNodes[(index * 11 + 13) % radialNodes.length];
-    if (first === second) return '';
-    return line('outer-fragment', null, first, second);
-  }).join('');
-
-  const foregroundLinks = byCluster.map((related, cluster) =>
-    line('foreground-link', cluster, related[2], related[5])
-  ).join('');
-
-  // Zichtbare stip op elk eindpunt
-  const nodes = localNodes.map((node, index) =>
-    dot(`micro-node ${index % 8 === 0 ? 'brighter-node' : ''}`, node, MICRO_DOT * (index % 8 === 0 ? 1.5 : 1), node.cluster)
-  ).join('');
-
-  const radialMarks = radialNodes.map((node, index) =>
-    dot(`radial-node ${index % 12 === 0 ? 'brighter-node' : ''}`, node, RADIAL_DOT * (index % 12 === 0 ? 1.5 : 1))
-  ).join('');
-
-  const centerMark = dot('radial-node brighter-node center-node', center, CENTER_DOT);
-
-  atmosphericNetwork.innerHTML = `<defs><filter id="networkBlur"><feGaussianBlur stdDeviation=".7" /></filter><filter id="networkGlow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation=".28" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><g class="network-background" filter="url(#networkBlur)">${backgroundParticles}</g><g class="network-midground">${radialRays}${heartRays}${outerFragments}${crossLinks}${localLinks}${branches}${radialMarks}${nodes}${centerMark}</g><g class="network-foreground" filter="url(#networkGlow)">${foregroundLinks}</g>`;
+  buttonConnections.innerHTML = `${buttonLines}${decorativeLines}${decorativeMarks}`;
 }
-
-function setLocalNetwork(cluster, active) {
-  atmosphericNetwork.querySelectorAll(`[data-clusters~="${cluster}"]`).forEach((element) => element.classList.toggle('is-local-active', active));
-}
-
-
-
-
-
 
 function setImages() {
   const backgroundFallback = document.querySelector('.background-fallback');
@@ -143,9 +64,74 @@ function setImages() {
   backgroundImage.onload = () => { backgroundFallback.style.display = 'none'; };
   centerImage.onload = () => { centerFallback.style.display = 'none'; centerImage.classList.add('is-visible'); };
 }
-drawAtmosphericNetwork();
-window.addEventListener('resize', drawAtmosphericNetwork);
+
 starData.forEach((star) => {
+  const previewImages = star.thumbnails || [star.thumbnail];
+  const thumbnail = document.createElement('div');
+  thumbnail.className = 'page-thumbnail';
+  thumbnail.style.setProperty('--preview-x', star.previewX);
+  thumbnail.style.setProperty('--preview-y', star.previewY);
+  thumbnail.innerHTML = `<div class="thumbnail-slides"><img class="thumbnail-image thumbnail-image--active" src="${previewImages[0]}" alt="Preview of ${star.label}" /><img class="thumbnail-image thumbnail-image--incoming" alt="" aria-hidden="true" /></div><img class="thumbnail-badge" src="${star.badge}" alt="${star.badgeLabel}" />`;
+  thumbnailLayer.append(thumbnail);
+
+  const previewImagesElements = thumbnail.querySelectorAll('.thumbnail-image');
+  let activeImage = previewImagesElements[0];
+  let incomingImage = previewImagesElements[1];
+  let activeSlide = 0;
+  let slideshowTimer = null;
+  let transitionTimer = null;
+  let isHovering = false;
+  let isFocused = false;
+
+  function showPreview() {
+    thumbnail.classList.add('is-visible');
+    if (previewImages.length > 1 && !slideshowTimer) {
+      slideshowTimer = window.setInterval(() => {
+        activeSlide = (activeSlide + 1) % previewImages.length;
+        incomingImage.src = previewImages[activeSlide];
+        incomingImage.classList.remove('is-entering');
+        void incomingImage.offsetWidth;
+        activeImage.classList.add('is-leaving');
+        incomingImage.classList.add('is-entering');
+
+        transitionTimer = window.setTimeout(() => {
+          activeImage.className = 'thumbnail-image thumbnail-image--incoming';
+          activeImage.alt = '';
+          activeImage.setAttribute('aria-hidden', 'true');
+          incomingImage.className = 'thumbnail-image thumbnail-image--active';
+          incomingImage.alt = `Preview of ${star.label}`;
+          incomingImage.removeAttribute('aria-hidden');
+          [activeImage, incomingImage] = [incomingImage, activeImage];
+          transitionTimer = null;
+        }, 500);
+      }, 1200);
+    }
+  }
+
+  function hidePreview() {
+    thumbnail.classList.remove('is-visible');
+    window.clearInterval(slideshowTimer);
+    window.clearTimeout(transitionTimer);
+    slideshowTimer = null;
+    transitionTimer = null;
+    activeSlide = 0;
+    activeImage = previewImagesElements[0];
+    incomingImage = previewImagesElements[1];
+    activeImage.className = 'thumbnail-image thumbnail-image--active';
+    activeImage.src = previewImages[activeSlide];
+    activeImage.alt = `Preview of ${star.label}`;
+    activeImage.removeAttribute('aria-hidden');
+    incomingImage.className = 'thumbnail-image thumbnail-image--incoming';
+    incomingImage.removeAttribute('src');
+    incomingImage.alt = '';
+    incomingImage.setAttribute('aria-hidden', 'true');
+  }
+
+  function syncPreviewVisibility() {
+    if (isHovering || isFocused) showPreview();
+    else hidePreview();
+  }
+
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'star has-info';
@@ -154,10 +140,13 @@ starData.forEach((star) => {
   button.setAttribute('aria-label', `Open ${star.label}`);
   button.innerHTML = `<span class="star-label">${star.label}</span>`;
   button.addEventListener('click', () => { window.location.href = star.url; });
-  button.addEventListener('pointerenter', () => { button.classList.add('is-network-active'); setLocalNetwork(starData.indexOf(star), true); });
-  button.addEventListener('pointerleave', () => { button.classList.remove('is-network-active'); setLocalNetwork(starData.indexOf(star), false); });
-  button.addEventListener('focus', () => { button.classList.add('is-network-active'); setLocalNetwork(starData.indexOf(star), true); });
-  button.addEventListener('blur', () => { button.classList.remove('is-network-active'); setLocalNetwork(starData.indexOf(star), false); });
+  button.addEventListener('pointerenter', () => { isHovering = true; syncPreviewVisibility(); });
+  button.addEventListener('pointerleave', () => { isHovering = false; syncPreviewVisibility(); });
+  button.addEventListener('focus', () => { isFocused = true; syncPreviewVisibility(); });
+  button.addEventListener('blur', () => { isFocused = false; syncPreviewVisibility(); });
   starsLayer.append(button);
 });
+
+drawButtonConnections();
+window.addEventListener('resize', drawButtonConnections);
 setImages();
